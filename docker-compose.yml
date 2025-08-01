@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - matches your existing postgres_connection.py exactly
+  postgres:
+    image: postgres:15
+    container_name: chatbot-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chatbot_app}
+      POSTGRES_USER: ${POSTGRES_USER:-chatbot_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chatbot_user}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis - matches your existing redis_connection.py exactly
+  redis:
+    image: redis:6-alpine
+    container_name: my-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: redis-server --appendonly yes
+
+  # ScyllaDB Node 1 - Primary node (your app will connect here with SCYLLA_PORT=9042)
+  scylla-node1:
+    image: scylladb/scylla:latest
+    container_name: scylla-node1
+    ports:
+      - "9042:9042"  # Primary connection port
+      - "10000:10000"
+    volumes:
+      - scylla_data1:/var/lib/scylla
+    restart: unless-stopped
+    command: --seeds=scylla-node1,scylla-node2,scylla-node3 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+
+  # ScyllaDB Node 2 - Cluster member
+  scylla-node2:
+    image: scylladb/scylla:latest
+    container_name: scylla-node2
+    ports:
+      - "9043:9042"
+      - "10001:10000"
+    volumes:
+      - scylla_data2:/var/lib/scylla
+    restart: unless-stopped
+    depends_on:
+      - scylla-node1
+    command: --seeds=scylla-node1,scylla-node2,scylla-node3 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+
+  # ScyllaDB Node 3 - Cluster member
+  scylla-node3:
+    image: scylladb/scylla:latest
+    container_name: scylla-node3
+    ports:
+      - "9044:9042"
+      - "10002:10000"
+    volumes:
+      - scylla_data3:/var/lib/scylla
+    restart: unless-stopped
+    depends_on:
+      - scylla-node1
+    command: --seeds=scylla-node1,scylla-node2,scylla-node3 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+
+volumes:
+  postgres_data:
+  redis_data:
+  scylla_data1:
+  scylla_data2:
+  scylla_data3:
