@@ -1,9 +1,4 @@
-# app/services/request_analyzer.py
-"""
-Intelligent request analyzer for automatic background task detection.
-Determines if requests should be processed as background tasks based on
-complexity estimation and keyword analysis.
-"""
+"""Intelligent request analyzer for automatic background task detection."""
 
 import re
 import logging
@@ -32,12 +27,7 @@ class RequestAnalysis:
     reason: str = ""
 
 class RequestAnalyzer:
-    """
-    Analyzes user requests to determine processing complexity and
-    automatically recommend background processing when appropriate.
-
-    Used by: ChatbotService._route_message() for intelligent task routing
-    """
+    """Analyzes user requests to determine processing complexity."""
 
     def __init__(self):
         # Define keyword patterns that indicate complex operations

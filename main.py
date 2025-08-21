@@ -1,5 +1,3 @@
-# main.py
-
 import signal
 import sys
 import asyncio
@@ -9,7 +7,6 @@ import os
 from datetime import datetime, timezone
 from typing import Optional
 
-# Set compatibility environment variables
 os.environ['SQLALCHEMY_WARN_20'] = '0'
 os.environ['SQLALCHEMY_SILENCE_UBER_WARNING'] = '1'
 
@@ -17,11 +14,8 @@ from app.config import config
 from app.database.redis_connection import redis_manager
 from app.database.postgres_connection import postgres_manager
 from app.services.chatbot_service import ChatbotService
-
-# Import existing services (no changes needed)
 from app.services.auth_service import auth_service
 
-# Configure logging
 logging.basicConfig(
     level=logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -30,11 +24,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class EnhancedChatbotApplication:
-    """
-    Enhanced chatbot application leveraging existing API infrastructure.
-    MINIMAL changes - just adds CLI authentication to existing services.
-    """
-
     def __init__(self):
         self.chatbot_service: Optional[ChatbotService] = None
         self.current_session: Optional[uuid.UUID] = None
@@ -42,15 +31,10 @@ class EnhancedChatbotApplication:
         self.current_user_token: Optional[str] = None
 
     async def initialize(self):
-        """Initialize with existing infrastructure - NO setup script needed"""
         try:
-            # Use existing initialization logic but make PostgreSQL mandatory
-
-            # 1. Initialize Redis (existing code)
             redis_manager.initialize()
             logger.info("Redis connection initialized")
 
-            # 2. Initialize PostgreSQL (make mandatory instead of optional)
             if not config.enable_postgresql:
                 logger.error("PostgreSQL is now REQUIRED for unified architecture")
                 return False
@@ -63,11 +47,9 @@ class EnhancedChatbotApplication:
                 logger.error("PostgreSQL is now REQUIRED. Please ensure it's running.")
                 return False
 
-            # 3. Initialize chatbot service (existing code)
             self.chatbot_service = ChatbotService()
             logger.info("Enhanced chatbot service initialized")
 
-            # 4. Seed knowledge base (existing code)
             logger.info("Seeding knowledge base...")
             if self.chatbot_service.knowledge_service.seed_knowledge_base():
                 logger.info("✅ Knowledge base seeded successfully!")
@@ -80,7 +62,6 @@ class EnhancedChatbotApplication:
             return False
 
     async def start_authenticated_session(self) -> bool:
-        """Add authentication flow using existing auth_service"""
         print("\n" + "="*70)
         print("🔐 ENHANCED CHATBOT - Authentication Options")
         print("="*70)
@@ -106,7 +87,6 @@ class EnhancedChatbotApplication:
                 return False
 
     async def _handle_login(self) -> bool:
-        """Use existing auth_service for login"""
         try:
             print("\n📧 User Login")
             email = input("Email: ").strip()
@@ -120,11 +100,9 @@ class EnhancedChatbotApplication:
                 print("❌ Password is required")
                 return False
 
-            # Use existing auth_service
             user = await auth_service.authenticate_user(email, password)
 
             if user:
-                # Use existing JWT creation
                 token_data = {"user_id": str(user.id), "email": user.email}
                 self.current_user_token = auth_service.create_access_token(token_data)
                 self.current_user = user
@@ -132,7 +110,6 @@ class EnhancedChatbotApplication:
                 print(f"\n✅ Login successful! Welcome back, {user.email}")
                 print(f"📊 Subscription: {user.subscription_plan.title()}")
 
-                # Create session with user data
                 user_data = {
                     "user_id": str(user.id),
                     "email": user.email,
@@ -150,7 +127,6 @@ class EnhancedChatbotApplication:
             return False
 
     async def _handle_registration(self) -> bool:
-        """Use existing auth_service for registration"""
         try:
             print("\n👤 Create New Account")
             email = input("Email: ").strip()
@@ -179,7 +155,6 @@ class EnhancedChatbotApplication:
             plan_map = {"1": "free", "2": "pro", "3": "enterprise"}
             subscription_plan = plan_map.get(plan_choice, "free")
 
-            # Use existing auth_service
             user = await auth_service.create_user(
                 email=email,
                 password=password,
@@ -188,7 +163,6 @@ class EnhancedChatbotApplication:
                 is_verified=True
             )
 
-            # Use existing JWT creation
             token_data = {"user_id": str(user.id), "email": user.email}
             self.current_user_token = auth_service.create_access_token(token_data)
             self.current_user = user
@@ -197,7 +171,6 @@ class EnhancedChatbotApplication:
             print(f"📧 Email: {user.email}")
             print(f"📊 Plan: {user.subscription_plan.title()}")
 
-            # Create session
             user_data = {
                 "user_id": str(user.id),
                 "email": user.email,
@@ -218,7 +191,6 @@ class EnhancedChatbotApplication:
             return False
 
     async def _handle_guest_mode(self) -> bool:
-        """Handle guest mode with existing session creation"""
         print("\n👤 Continuing as Guest")
         print("📊 Limited features: Basic Q&A, no background tasks, no quota management")
 
@@ -227,23 +199,19 @@ class EnhancedChatbotApplication:
         return True
 
     def process_user_input(self, user_input: str) -> str:
-        """Process with authentication-aware routing"""
         if not self.current_session:
             return "❌ No active session."
 
         message_lower = user_input.lower().strip()
 
-        # Handle authenticated commands BEFORE passing to chatbot_service
         if self.current_user and self.current_user_token:
             if message_lower == '/dashboard':
                 return self._get_authenticated_dashboard()
             elif message_lower == '/profile':
                 return self._get_authenticated_profile()
 
-        # For everything else, use existing chatbot_service
         response = self.chatbot_service.process_message(self.current_session, user_input)
 
-        # Add user context if authenticated
         if self.current_user:
             metadata = [f"👤 {self.current_user.email}", f"📊 {self.current_user.subscription_plan}"]
             return f"{response.message}\n\n🔧 {' | '.join(metadata)}"
@@ -251,7 +219,6 @@ class EnhancedChatbotApplication:
         return response.message
 
     def _get_authenticated_dashboard(self) -> str:
-        """Simple authenticated dashboard using existing API services"""
         try:
             user = self.current_user
             return f"""📊 **Personal Dashboard**
@@ -271,7 +238,6 @@ class EnhancedChatbotApplication:
             return f"❌ Dashboard error: {e}"
 
     def _get_authenticated_profile(self) -> str:
-        """Simple authenticated profile"""
         try:
             user = self.current_user
             return f"""👤 **Your Profile**
@@ -286,18 +252,15 @@ class EnhancedChatbotApplication:
             return f"❌ Profile error: {e}"
 
     def get_session_stats(self) -> str:
-        """Enhanced stats with user information"""
         if not self.current_session:
             return "No active session"
 
-        # Use existing session summary
         summary = self.chatbot_service.get_session_summary(self.current_session)
 
         stats = f"""📊 Session Statistics:
 - Session ID: {str(self.current_session)[:8]}...
 - Messages: {summary.get('message_count', 0)}"""
 
-        # Add user info if authenticated
         if self.current_user:
             stats += f"""
 - User: {self.current_user.email}
@@ -311,7 +274,6 @@ class EnhancedChatbotApplication:
         return stats
 
     def cleanup(self):
-        """Use existing cleanup logic"""
         try:
             if self.chatbot_service:
                 self.chatbot_service.background_tasks.shutdown()
@@ -333,7 +295,6 @@ class EnhancedChatbotApplication:
             logger.error(f"Error during cleanup: {e}")
 
 async def main():
-    """Main entry point with minimal changes"""
     app = EnhancedChatbotApplication()
 
     # Signal handler

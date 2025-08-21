@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_db_session, get_current_user
+from app.core.auth_dependencies import get_db_session, get_current_user
 from app.services.auth_service import auth_service
 from app.database.postgres_models import User
 

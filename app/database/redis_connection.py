@@ -1,4 +1,3 @@
-# app/database/redis_connection.py - Redis 6.2.0 Compatible
 import redis
 import logging
 from typing import Optional
@@ -19,19 +18,20 @@ from app.config import config
 
 logger = logging.getLogger(__name__)
 
+
 class RedisConnectionManager:
-    """Redis connection management with connection pooling for Redis 6.2.0"""
+    """Redis connection management with connection pooling"""
 
     def __init__(self):
         self._pool: Optional[redis.ConnectionPool] = None
         self._async_pool: Optional = None
         self._client: Optional[redis.Redis] = None
         self._async_client: Optional = None
+        self._connected: bool = False
 
     def initialize(self) -> None:
         """Initialize Redis connection pools"""
         try:
-            # Synchronous connection pool (Redis 6.2.0 compatible)
             self._pool = redis.ConnectionPool(
                 host=config.redis.host,
                 port=config.redis.port,
@@ -41,15 +41,13 @@ class RedisConnectionManager:
                 socket_timeout=config.redis.socket_timeout,
                 socket_connect_timeout=config.redis.socket_connect_timeout,
                 decode_responses=True,
-                health_check_interval=30  # Redis 6.x feature
+                health_check_interval=30
             )
 
             self._client = redis.Redis(connection_pool=self._pool)
 
-            # Async connection pool (if available)
             if ASYNC_REDIS_AVAILABLE and aioredis:
                 try:
-                    # Redis 6.x async connection
                     self._async_pool = aioredis.ConnectionPool(
                         host=config.redis.host,
                         port=config.redis.port,
@@ -64,11 +62,12 @@ class RedisConnectionManager:
                 except Exception as e:
                     logger.warning(f"Async Redis setup failed: {e}, continuing with sync only")
 
-            # Test connection
             self._client.ping()
+            self._connected = True
             logger.info(f"Redis {redis.__version__} connected successfully to {config.redis.host}:{config.redis.port}")
 
         except Exception as e:
+            self._connected = False
             logger.error(f"Failed to initialize Redis connection: {e}")
             raise ConnectionError(f"Cannot connect to Redis: {e}")
 
@@ -81,13 +80,27 @@ class RedisConnectionManager:
 
     @property
     def async_client(self):
-        """Get asynchronous Redis client (if available)"""
+        """Get asynchronous Redis client"""
         if not self._async_client:
             if ASYNC_REDIS_AVAILABLE:
                 self.initialize()
             else:
                 raise RuntimeError("Async Redis not available")
         return self._async_client
+
+    @property
+    def is_connected(self) -> bool:
+        """Check if Redis is connected"""
+        if not self._connected or not self._client:
+            return False
+
+        try:
+            self._client.ping()
+            return True
+        except Exception as e:
+            logger.debug(f"Redis connection check failed: {e}")
+            self._connected = False
+            return False
 
     @asynccontextmanager
     async def get_async_client(self):
@@ -117,6 +130,7 @@ class RedisConnectionManager:
                 except Exception:
                     pass
 
+            self._connected = False
             logger.info("Redis connections closed")
         except Exception as e:
             logger.error(f"Error closing Redis connections: {e}")
@@ -125,22 +139,24 @@ class RedisConnectionManager:
         """Test Redis connection"""
         try:
             self.client.ping()
+            self._connected = True
             return True
         except Exception as e:
             logger.error(f"Redis connection test failed: {e}")
+            self._connected = False
             return False
 
-# Global Redis manager instance
-redis_manager = RedisConnectionManager()
 
-# Helper functions for easy access
+redis_manager: Optional[RedisConnectionManager] = None
+
+def get_redis_manager() -> "RedisConnectionManager":
+    global redis_manager
+    if redis_manager is None:
+        redis_manager = RedisConnectionManager()
+    return redis_manager
+
 def get_redis() -> redis.Redis:
-    """Get Redis client instance"""
-    return redis_manager.client
-
-async def get_async_redis():
-    """Get async Redis client instance (if available)"""
-    if ASYNC_REDIS_AVAILABLE:
-        return redis_manager.async_client
-    else:
-        raise RuntimeError("Async Redis not available")
+    manager = get_redis_manager()
+    if not manager.is_connected:
+        manager.initialize()
+    return manager.client

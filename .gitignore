@@ -269,4 +269,6 @@ auto_generated/
 !examples/
 !docs/**/*.png
 !docs/**/*.jpg
-!docs/**/*.svg
+!docs/**/*.svgbackups/
+.env
+backups/

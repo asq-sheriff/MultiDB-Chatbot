@@ -1,8 +1,4 @@
-# app/database/redis_models.py - REPLACE entire file
-"""
-Redis data models for caching, sessions, and analytics.
-Provides fast access to frequently used data with automatic expiration.
-"""
+"""Redis data models for caching, sessions, and analytics"""
 import uuid
 import json
 import logging
@@ -54,14 +50,14 @@ class RedisBaseModel:
             return data
 
 class CacheModel(RedisBaseModel):
-    """Enhanced FAQ response caching model with metadata and tags"""
+    """FAQ response caching model"""
 
     def __init__(self):
         super().__init__("cache:faq")
 
     def set_response(self, question_hash: str, response: Dict[str, Any],
                      ttl: Optional[int] = None) -> bool:
-        """Cache FAQ response (basic method)"""
+        """Cache FAQ response"""
         try:
             key = self._make_key(question_hash)
             ttl = ttl or config.redis.default_cache_ttl
@@ -95,7 +91,7 @@ class CacheModel(RedisBaseModel):
             return None
 
     def invalidate_cache(self, pattern: Optional[str] = None) -> int:
-        """Invalidate cache entries (basic method)"""
+        """Invalidate cache entries"""
         try:
             if pattern:
                 keys = self.redis.keys(f"{self.key_prefix}:{pattern}")
@@ -111,7 +107,7 @@ class CacheModel(RedisBaseModel):
 
     def cache_with_metadata(self, question_hash: str, response: Dict[str, Any],
                             ttl: Optional[int] = None, tags: List[str] = None) -> bool:
-        """Enhanced caching with metadata and tags"""
+        """Cache response with metadata and tags"""
         try:
             key = self._make_key(question_hash)
             ttl = ttl or config.redis.default_cache_ttl
@@ -125,15 +121,13 @@ class CacheModel(RedisBaseModel):
                 "access_count": 0
             }
 
-            # Store main cache entry
             success = self.redis.setex(key, ttl, self._serialize(cache_data))
 
-            # Store tags for selective invalidation
             if tags and success:
                 for tag in tags:
                     tag_key = f"tag:{tag}"
                     self.redis.sadd(tag_key, key)
-                    self.redis.expire(tag_key, ttl + 300)  # Tags live longer
+                    self.redis.expire(tag_key, ttl + 300)
 
             return success
         except Exception as e:
@@ -146,9 +140,7 @@ class CacheModel(RedisBaseModel):
             tag_key = f"tag:{tag}"
             keys = self.redis.smembers(tag_key)
             if keys:
-                # Remove the actual cache entries
                 deleted = self.redis.delete(*keys)
-                # Remove the tag set
                 self.redis.delete(tag_key)
                 return deleted
             return 0
@@ -190,7 +182,6 @@ class SessionModel(RedisBaseModel):
             session_data = self.redis.get(key)
 
             if session_data:
-                # Update last activity
                 data = self._deserialize(session_data)
                 data["last_activity"] = datetime.now(timezone.utc).isoformat()
                 self.redis.setex(key, config.redis.session_ttl, self._serialize(data))
@@ -213,7 +204,6 @@ class SessionModel(RedisBaseModel):
                 "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
-            # Limit chat history size
             if len(chat_history) > config.max_chat_history:
                 chat_history = chat_history[-config.max_chat_history:]
 
@@ -257,7 +247,6 @@ class AnalyticsModel(RedisBaseModel):
                 "data": event_data
             }
 
-            # Use Redis list to store events
             self.redis.lpush(key, self._serialize(event_record))
             self.redis.expire(key, config.redis.analytics_ttl)
 
@@ -276,13 +265,11 @@ class PopularityTracker(RedisBaseModel):
         """Track question popularity"""
         current_time = time.time()
 
-        # Track in daily bucket
         day_key = f"day:{int(current_time // 86400)}"
         key = self._make_key(day_key)
         self.redis.zincrby(key, increment, question_hash)
-        self.redis.expire(key, 172800)  # Keep for 2 days
+        self.redis.expire(key, 172800)
 
-        # Track all-time with decay
         all_time_key = self._make_key("all")
         self.redis.zincrby(all_time_key, increment * 0.1, question_hash)
 
@@ -294,37 +281,16 @@ class PopularityTracker(RedisBaseModel):
 
 
 class NotificationModel(RedisBaseModel):
-    """
-    User-specific notification queue using Redis Lists.
-    Provides FIFO (First In, First Out) notification delivery.
-
-    Redis Operations:
-    - LPUSH: Add notifications to head of list
-    - RPOP: Remove notifications from tail (FIFO order)
-    - LLEN: Count notifications
-    - LTRIM: Limit list size
-    - LRANGE: Peek at notifications without removing
-    """
+    """User-specific notification queue using Redis Lists"""
 
     def __init__(self):
         super().__init__("notifications:user")
 
     def add_notification(self, user_id: str, notification: Dict[str, Any]) -> bool:
-        """
-        Add notification to user's queue.
-        Called by: BackgroundTaskService when tasks complete
-
-        Args:
-            user_id: User identifier
-            notification: Dict with 'title', 'message', optional 'type' and 'data'
-
-        Returns:
-            bool: Success status
-        """
+        """Add notification to user's queue"""
         try:
             key = self._make_key(user_id)
 
-            # Create structured notification
             notification_data = {
                 "id": str(uuid.uuid4()),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -335,43 +301,24 @@ class NotificationModel(RedisBaseModel):
                 "read": False
             }
 
-            # Redis: LPUSH notifications:user:{user_id} {notification_data}
             self.redis.lpush(key, self._serialize(notification_data))
-
-            # Limit to 50 notifications per user
-            # Redis: LTRIM notifications:user:{user_id} 0 49
             self.redis.ltrim(key, 0, 49)
-
-            # Set 7-day TTL for automatic cleanup
-            # Redis: EXPIRE notifications:user:{user_id} 604800
             self.redis.expire(key, 604800)
 
-            logger.info(f"✅ Notification added for user {user_id}: {notification['title']}")
+            logger.info(f"Notification added for user {user_id}: {notification['title']}")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Failed to add notification for user {user_id}: {e}")
+            logger.error(f"Failed to add notification for user {user_id}: {e}")
             return False
 
     def get_notifications(self, user_id: str, count: int = 10) -> List[Dict[str, Any]]:
-        """
-        Get and remove notifications from user's queue (FIFO order).
-        Called by: ChatbotService when user checks notifications
-
-        Args:
-            user_id: User identifier
-            count: Maximum notifications to retrieve
-
-        Returns:
-            List[Dict]: List of notifications (oldest first)
-        """
+        """Get and remove notifications from user's queue"""
         try:
             key = self._make_key(user_id)
             notifications = []
 
-            # Get notifications from tail (FIFO - oldest first)
             for _ in range(count):
-                # Redis: RPOP notifications:user:{user_id}
                 notification_data = self.redis.rpop(key)
                 if not notification_data:
                     break
@@ -387,19 +334,9 @@ class NotificationModel(RedisBaseModel):
             return []
 
     def count_notifications(self, user_id: str) -> int:
-        """
-        Count pending notifications for user.
-        Called by: ChatbotService to show notification count
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            int: Number of pending notifications
-        """
+        """Count pending notifications for user"""
         try:
             key = self._make_key(user_id)
-            # Redis: LLEN notifications:user:{user_id}
             count = self.redis.llen(key)
             return count
         except Exception as e:
@@ -407,26 +344,12 @@ class NotificationModel(RedisBaseModel):
             return 0
 
     def peek_notifications(self, user_id: str, count: int = 5) -> List[Dict[str, Any]]:
-        """
-        Preview notifications without removing them.
-        Called by: ChatbotService for notification previews
-
-        Args:
-            user_id: User identifier
-            count: Number of notifications to preview
-
-        Returns:
-            List[Dict]: Preview of notifications (oldest first)
-        """
+        """Preview notifications without removing them"""
         try:
             key = self._make_key(user_id)
-
-            # Redis: LRANGE notifications:user:{user_id} -count -1
-            # Get from tail (oldest notifications first)
             notification_strings = self.redis.lrange(key, -count, -1)
 
             notifications = []
-            # Reverse to maintain FIFO order (oldest first)
             for notification_data in reversed(notification_strings):
                 notification = self._deserialize(notification_data)
                 notifications.append(notification)
@@ -438,23 +361,10 @@ class NotificationModel(RedisBaseModel):
             return []
 
     def clear_notifications(self, user_id: str) -> int:
-        """
-        Clear all notifications for user.
-        Called by: ChatbotService when user wants to clear all notifications
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            int: Number of notifications cleared
-        """
+        """Clear all notifications for user"""
         try:
             key = self._make_key(user_id)
-
-            # Count before deletion
             count = self.redis.llen(key)
-
-            # Redis: DEL notifications:user:{user_id}
             self.redis.delete(key)
 
             logger.info(f"Cleared {count} notifications for user {user_id}")
@@ -463,3 +373,152 @@ class NotificationModel(RedisBaseModel):
         except Exception as e:
             logger.error(f"Failed to clear notifications for user {user_id}: {e}")
             return 0
+
+
+class BillingCacheModel(RedisBaseModel):
+    """Billing-specific caching model"""
+
+    def __init__(self):
+        super().__init__("billing")
+
+    async def cache_subscription(
+            self,
+            user_id: str,
+            subscription: Any,
+            ttl: int = 300  # 5 minutes
+    ) -> bool:
+        """Cache user subscription"""
+        try:
+            key = self._make_key(f"subscription:{user_id}")
+
+            # Convert SQLAlchemy object to dict
+            sub_data = {
+                "id": str(subscription.id),
+                "plan_type": subscription.plan_type,
+                "status": subscription.status,
+                "billing_cycle": subscription.billing_cycle,
+                "started_at": subscription.started_at.isoformat(),
+                "ends_at": subscription.ends_at.isoformat() if subscription.ends_at else None,
+                "auto_renew": subscription.auto_renew,
+                "limits": subscription.limits,
+                "amount_cents": subscription.amount_cents,
+                "currency": subscription.currency
+            }
+
+            return self.redis.setex(
+                key,
+                ttl,
+                self._serialize(sub_data)
+            )
+        except Exception as e:
+            logger.error(f"Failed to cache subscription: {e}")
+            return False
+
+    async def get_cached_subscription(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get cached subscription"""
+        try:
+            key = self._make_key(f"subscription:{user_id}")
+            cached_data = self.redis.get(key)
+
+            if cached_data:
+                return self._deserialize(cached_data)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get cached subscription: {e}")
+            return None
+
+    async def cache_quota(
+            self,
+            user_id: str,
+            resource_type: str,
+            quota_info: Dict[str, Any],
+            ttl: int = 60  # 1 minute
+    ) -> bool:
+        """Cache quota information"""
+        try:
+            key = self._make_key(f"quota:{user_id}:{resource_type}")
+            return self.redis.setex(
+                key,
+                ttl,
+                self._serialize(quota_info)
+            )
+        except Exception as e:
+            logger.error(f"Failed to cache quota: {e}")
+            return False
+
+    async def get_cached_quota(
+            self,
+            user_id: str,
+            resource_type: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get cached quota information"""
+        try:
+            key = self._make_key(f"quota:{user_id}:{resource_type}")
+            cached_data = self.redis.get(key)
+
+            if cached_data:
+                return self._deserialize(cached_data)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get cached quota: {e}")
+            return None
+
+    async def cache_usage_summary(
+            self,
+            user_id: str,
+            summary: Dict[str, Any],
+            ttl: int = 300  # 5 minutes
+    ) -> bool:
+        """Cache usage summary"""
+        try:
+            key = self._make_key(f"usage_summary:{user_id}")
+            return self.redis.setex(
+                key,
+                ttl,
+                self._serialize(summary)
+            )
+        except Exception as e:
+            logger.error(f"Failed to cache usage summary: {e}")
+            return False
+
+    async def get_cached_usage_summary(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get cached usage summary"""
+        try:
+            key = self._make_key(f"usage_summary:{user_id}")
+            cached_data = self.redis.get(key)
+
+            if cached_data:
+                return self._deserialize(cached_data)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get cached usage summary: {e}")
+            return None
+
+    async def invalidate_user_cache(self, user_id: str) -> int:
+        """Invalidate all billing cache for a user"""
+        try:
+            patterns = [
+                f"subscription:{user_id}",
+                f"quota:{user_id}:*",
+                f"usage_summary:{user_id}"
+            ]
+
+            deleted = 0
+            for pattern in patterns:
+                keys = self.redis.keys(f"{self.key_prefix}:{pattern}")
+                if keys:
+                    deleted += self.redis.delete(*keys)
+
+            return deleted
+        except Exception as e:
+            logger.error(f"Failed to invalidate user cache: {e}")
+            return 0
+
+    async def invalidate_quota_cache(self, user_id: str, resource_type: str) -> bool:
+        """Invalidate specific quota cache"""
+        try:
+            key = self._make_key(f"quota:{user_id}:{resource_type}")
+            return bool(self.redis.delete(key))
+        except Exception as e:
+            logger.error(f"Failed to invalidate quota cache: {e}")
+            return False

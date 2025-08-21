@@ -1,20 +1,16 @@
-# app/services/timeout_processor.py
-"""
-Timeout-based processor that automatically moves long-running tasks to background.
-Monitors task execution time and seamlessly transfers to background processing
-when threshold is exceeded.
-"""
+"""Timeout-based processor that automatically moves long-running tasks to background."""
 
 import asyncio
 import threading
 import time
 import logging
-from typing import Callable, Any, Optional, Dict
+from typing import Callable, Any, Optional, Dict, TYPE_CHECKING
 from dataclasses import dataclass
 from concurrent.futures import Future, ThreadPoolExecutor
 import uuid
 
-from app.services.background_tasks import BackgroundTaskService
+if TYPE_CHECKING:
+    from app.services.background_tasks import BackgroundTaskService
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +22,9 @@ class TimeoutConfig:
     max_foreground_duration: float = 10.0   # Absolute max foreground time
 
 class TimeoutProcessor:
-    """
-    Processes requests with automatic timeout detection.
-    If a request takes longer than the threshold, it automatically moves
-    the task to background processing and notifies the user.
+    """Processes requests with automatic timeout detection."""
 
-    Used by: ChatbotService for intelligent request processing
-    """
-
-    def __init__(self, background_service: BackgroundTaskService):
+    def __init__(self, background_service: Optional['BackgroundTaskService'] = None):
         self.background_service = background_service
         self.config = TimeoutConfig()
 

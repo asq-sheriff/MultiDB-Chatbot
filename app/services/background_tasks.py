@@ -1,8 +1,4 @@
-# app/services/background_tasks.py - COMPLETE UPDATED FILE
-"""
-Background task processing service for long-running operations.
-Simulates async processing and sends notifications when tasks complete.
-"""
+"""Background task processing service for long-running operations."""
 
 import asyncio
 import time
@@ -28,10 +24,7 @@ class TaskResult:
     duration_seconds: float = 0.0
 
 class BackgroundTaskService:
-    """
-    Service for handling long-running background tasks.
-    Uses ThreadPoolExecutor for async processing and Redis Lists for notifications.
-    """
+    """Service for handling long-running background tasks."""
 
     def __init__(self):
         self.notification_model = NotificationModel()
@@ -45,18 +38,7 @@ class BackgroundTaskService:
 
     def submit_data_analysis_task(self, user_id: str, data_description: str,
                                   session_id: str) -> str:
-        """
-        Submit a data analysis task for background processing.
-        Called by: ChatbotService when user requests data analysis
-
-        Args:
-            user_id: User identifier
-            data_description: Description of data to analyze
-            session_id: Current chat session
-
-        Returns:
-            str: Task ID for tracking
-        """
+        """Submit a data analysis task for background processing."""
         task_id = str(uuid.uuid4())
 
         # Submit task to thread pool
@@ -85,18 +67,7 @@ class BackgroundTaskService:
 
     def submit_research_task(self, user_id: str, research_topic: str,
                              session_id: str) -> str:
-        """
-        Submit a research task for background processing.
-        Called by: ChatbotService when user requests research
-
-        Args:
-            user_id: User identifier
-            research_topic: Topic to research
-            session_id: Current chat session
-
-        Returns:
-            str: Task ID for tracking
-        """
+        """Submit a research task for background processing."""
         task_id = str(uuid.uuid4())
 
         # Submit task to thread pool

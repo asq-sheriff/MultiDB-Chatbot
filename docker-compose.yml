@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL - matches your existing postgres_connection.py exactly
   postgres:
     image: postgres:15
     container_name: chatbot-postgres
@@ -16,11 +15,10 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chatbot_user}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Redis - matches your existing redis_connection.py exactly
   redis:
     image: redis:6-alpine
     container_name: my-redis
@@ -31,25 +29,54 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
     command: redis-server --appendonly yes
 
-  # ScyllaDB Node 1 - Primary node (your app will connect here with SCYLLA_PORT=9042)
+  mongodb:
+    image: mongodb/mongodb-atlas-local:latest
+    container_name: mongodb-atlas-local
+    hostname: mongodb-atlas-local
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=root
+      - MONGODB_INITDB_ROOT_PASSWORD=example
+      - MONGODB_REPLICA_SET_NAME=mongodb-atlas-local
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+      - mongo-mongot:/data/mongot
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "mongosh --eval 'db.runCommand(\"ping\").ok' --quiet" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # ScyllaDB Node 1 (Seed Node)
   scylla-node1:
+    platform: linux/arm64 # Or linux/amd64 if you have an Intel Mac
     image: scylladb/scylla:latest
     container_name: scylla-node1
     ports:
-      - "9042:9042"  # Primary connection port
+      - "9042:9042"
       - "10000:10000"
     volumes:
       - scylla_data1:/var/lib/scylla
     restart: unless-stopped
-    command: --seeds=scylla-node1,scylla-node2,scylla-node3 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+    command: --seeds=scylla-node1 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+    healthcheck:
+      test: [ "CMD-SHELL", "nodetool status | grep -w 'UN'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 24 # Give the seed node up to 4 minutes to become healthy
 
-  # ScyllaDB Node 2 - Cluster member
+  # ScyllaDB Node 2 - Waits for Node 1 to be HEALTHY
   scylla-node2:
+    platform: linux/arm64
     image: scylladb/scylla:latest
     container_name: scylla-node2
     ports:
@@ -59,11 +86,18 @@ services:
       - scylla_data2:/var/lib/scylla
     restart: unless-stopped
     depends_on:
-      - scylla-node1
-    command: --seeds=scylla-node1,scylla-node2,scylla-node3 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+      scylla-node1:
+        condition: service_healthy # CRITICAL CHANGE
+    command: --seeds=scylla-node1 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+    healthcheck:
+      test: [ "CMD-SHELL", "nodetool status | grep -w 'UN'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
-  # ScyllaDB Node 3 - Cluster member
+  # ScyllaDB Node 3 - Waits for Node 2 to be HEALTHY
   scylla-node3:
+    platform: linux/arm64
     image: scylladb/scylla:latest
     container_name: scylla-node3
     ports:
@@ -73,8 +107,14 @@ services:
       - scylla_data3:/var/lib/scylla
     restart: unless-stopped
     depends_on:
-      - scylla-node1
-    command: --seeds=scylla-node1,scylla-node2,scylla-node3 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+      scylla-node2:
+        condition: service_healthy # CRITICAL CHANGE
+    command: --seeds=scylla-node1 --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+    healthcheck:
+      test: [ "CMD-SHELL", "nodetool status | grep -w 'UN'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
 volumes:
   postgres_data:
@@ -82,3 +122,6 @@ volumes:
   scylla_data1:
   scylla_data2:
   scylla_data3:
+  mongo-data:
+  mongo-config:
+  mongo-mongot:

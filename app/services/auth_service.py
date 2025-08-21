@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import config
-from app.database.postgres_connection import postgres_manager
+from app.database.postgres_connection import get_postgres_manager  # FIXED: Import getter
 from app.database.postgres_models import User, AuditLog
 import warnings
 warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
@@ -17,12 +17,7 @@ warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
 logger = logging.getLogger(__name__)
 
 class AuthService:
-    """
-    Authentication and authorization service.
-
-    Used by: FastAPI endpoints in app/api/endpoints/auth.py
-    Integration: Works with PostgreSQL for user data, creates audit logs
-    """
+    """Authentication and authorization service."""
 
     def __init__(self):
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -48,11 +43,9 @@ class AuthService:
         return self.pwd_context.hash(password)
 
     async def authenticate_user(self, email: str, password: str) -> Optional[User]:
-        """
-        Authenticate user with email and password.
-        Called by: API endpoints for login
-        """
-        async with postgres_manager.get_session() as session:
+        """Authenticate user with email and password."""
+        manager = get_postgres_manager()  # FIXED: Get initialized manager
+        async with manager.get_session() as session:
             # Get user by email
             result = await session.execute(
                 select(User).where(User.email == email)
@@ -70,46 +63,37 @@ class AuthService:
 
             return user
 
-    async def create_user(self, email: str, password: str, **kwargs) -> User:
-        """
-        Create new user account.
-        Called by: API endpoints for registration
+    async def create_user(self, email: str, password: str, session: AsyncSession, subscription_plan: str = "free", **kwargs) -> User:
+        """Create new user account."""
+        # Check if user already exists
+        result = await session.execute(
+            select(User).where(User.email == email)
+        )
+        if result.scalar_one_or_none():
+            raise ValueError("User with this email already exists")
 
-        FIXED: Properly handle subscription_plan to avoid duplicate keyword arguments
-        """
-        async with postgres_manager.get_session() as session:
-            # Check if user already exists
-            result = await session.execute(
-                select(User).where(User.email == email)
-            )
-            if result.scalar_one_or_none():
-                raise ValueError("User with this email already exists")
+        user = User(
+            email=email,
+            hashed_password=self.get_password_hash(password),
+            subscription_plan=subscription_plan,
+            **kwargs
+        )
 
-            # Extract subscription_plan from kwargs to avoid duplication
-            subscription_plan = kwargs.pop("subscription_plan", "free")
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
 
-            # Create new user with explicit parameters
-            user = User(
-                email=email,
-                hashed_password=self.get_password_hash(password),
-                subscription_plan=subscription_plan,
-                **kwargs  # Now kwargs won't contain subscription_plan
-            )
+        # Log user creation
+        await self._log_audit(session, user.id, "user_created", "user",
+                              new_values={"email": email, "subscription_plan": user.subscription_plan})
 
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-
-            # Log user creation
-            await self._log_audit(session, user.id, "user_created", "user",
-                                  new_values={"email": email, "subscription_plan": user.subscription_plan})
-
-            logger.info(f"Created new user: {email}")
-            return user
+        logger.info(f"Created new user: {email}")
+        return user
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> Optional[User]:
         """Get user by ID"""
-        async with postgres_manager.get_session() as session:
+        manager = get_postgres_manager()  # FIXED: Get initialized manager
+        async with manager.get_session() as session:
             result = await session.execute(
                 select(User).where(User.id == user_id)
             )
@@ -117,7 +101,8 @@ class AuthService:
 
     async def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email"""
-        async with postgres_manager.get_session() as session:
+        manager = get_postgres_manager()  # FIXED: Get initialized manager
+        async with manager.get_session() as session:
             result = await session.execute(
                 select(User).where(User.email == email)
             )
@@ -150,4 +135,10 @@ class AuthService:
         session.add(audit_log)
 
 # Global auth service instance
-auth_service = AuthService()
+auth_service: Optional["AuthService"] = None
+
+def get_auth_service() -> "AuthService":
+    global auth_service
+    if auth_service is None:
+        auth_service = AuthService()
+    return auth_service

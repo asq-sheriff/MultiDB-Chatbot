@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, TYPE_CHECKING
 import logging
 
 from sqlalchemy import select, update, func
@@ -8,33 +8,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.postgres_connection import postgres_manager
 from app.database.postgres_models import User, Organization, AuditLog
-from app.services.auth_service import auth_service
+
+if TYPE_CHECKING:
+    from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
 class UserService:
-    """
-    User management and profile service.
-
-    Used by: API endpoints in app/api/endpoints/users.py, chatbot_service.py
-    Integration: Works with auth_service.py and provides user management
-    """
+    """User management and profile service."""
+    def __init__(self, auth_service: Optional['AuthService'] = None):
+        """Initialize with injected auth service"""
+        self.auth_service = auth_service
+        logger.info("UserService initialized")
 
     async def update_user_profile(self, user_id: uuid.UUID,
                                   profile_data: Dict[str, Any]) -> Optional[User]:
-        """
-        Update user profile information.
-
-        Called by: API endpoints for profile updates
-        Location: Will be used in app/api/endpoints/users.py
-
-        Args:
-            user_id: User UUID
-            profile_data: Dict with profile updates
-
-        Returns:
-            Updated User object or None if failed
-        """
+        """Update user profile information."""
         try:
             async with postgres_manager.get_session() as session:
                 # Get current user
@@ -84,19 +73,7 @@ class UserService:
 
     async def change_subscription_plan(self, user_id: uuid.UUID,
                                        new_plan: str) -> bool:
-        """
-        Change user subscription plan.
-
-        Called by: billing_service.py, API endpoints
-        Location: Used in billing flows and admin operations
-
-        Args:
-            user_id: User UUID
-            new_plan: New plan type ("free", "pro", "enterprise")
-
-        Returns:
-            bool: Success status
-        """
+        """Change user subscription plan."""
         try:
             valid_plans = ["free", "pro", "enterprise"]
             if new_plan not in valid_plans:
@@ -131,19 +108,7 @@ class UserService:
 
     async def deactivate_user(self, user_id: uuid.UUID,
                               deactivated_by: Optional[uuid.UUID] = None) -> bool:
-        """
-        Deactivate user account.
-
-        Called by: Admin operations, user self-deletion
-        Location: Used in admin panels and account deletion flows
-
-        Args:
-            user_id: User UUID to deactivate
-            deactivated_by: Admin user ID (if admin action)
-
-        Returns:
-            bool: Success status
-        """
+        """Deactivate user account."""
         try:
             async with postgres_manager.get_session() as session:
                 # Update user status
@@ -173,18 +138,7 @@ class UserService:
             return False
 
     async def get_user_statistics(self, user_id: uuid.UUID) -> Dict[str, Any]:
-        """
-        Get comprehensive user statistics.
-
-        Called by: Dashboard endpoints, analytics
-        Location: Used in user dashboard and admin panels
-
-        Args:
-            user_id: User UUID
-
-        Returns:
-            Dict with user statistics
-        """
+        """Get comprehensive user statistics."""
         try:
             async with postgres_manager.get_session() as session:
                 # Get user basic info
@@ -218,19 +172,7 @@ class UserService:
             return {"error": str(e)}
 
     async def search_users(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """
-        Search users by email or other criteria.
-
-        Called by: Admin panels, user management interfaces
-        Location: Used in admin operations
-
-        Args:
-            query: Search query (email pattern)
-            limit: Maximum results to return
-
-        Returns:
-            List of user summaries
-        """
+        """Search users by email or other criteria."""
         try:
             async with postgres_manager.get_session() as session:
                 # Search by email pattern
@@ -260,21 +202,7 @@ class UserService:
     async def _log_audit(self, session: AsyncSession, user_id: Optional[uuid.UUID],
                          action: str, resource_type: str, resource_id: Optional[str] = None,
                          old_values: Optional[dict] = None, new_values: Optional[dict] = None):
-        """
-        Internal method to log audit events.
-
-        Used by: All methods in this service that modify data
-        Location: Called internally within user_service methods
-
-        Args:
-            session: Database session
-            user_id: User performing the action
-            action: Action description
-            resource_type: Type of resource modified
-            resource_id: ID of the resource
-            old_values: Previous values
-            new_values: New values
-        """
+        """Internal method to log audit events."""
         audit_log = AuditLog(
             user_id=user_id,
             action=action,
@@ -285,5 +213,12 @@ class UserService:
         )
         session.add(audit_log)
 
-# Global user service instance
-user_service = UserService()
+
+user_service: Optional["UserService"] = None
+
+def get_user_service() -> "UserService":
+    global user_service
+    if user_service is None:
+        user_service = UserService()
+    return user_service
+

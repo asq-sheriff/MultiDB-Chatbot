@@ -1,0 +1,14 @@
+*.pyc
+__pycache__/
+.venv/
+venv/
+*.log
+*.tmp
+node_modules/
+.git/
+.idea/
+*.backup
+claude_sessions/
+.DS_Store
+*.sqlite
+*.db

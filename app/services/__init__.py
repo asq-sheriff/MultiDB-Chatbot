@@ -1,9 +1,17 @@
-# app/services/__init__.py
-
 """Service layer for the enhanced chatbot application."""
 
-from .chatbot_service import ChatbotService, ChatResponse
-from .knowledge_service import KnowledgeService, MatchResult
+try:
+    from .chatbot_service import ChatbotService, ChatResponse
+except ImportError:
+    ChatbotService = None
+    ChatResponse = None
+
+try:
+    from .knowledge_service import KnowledgeService, SearchConfig
+except ImportError:
+    KnowledgeService = None
+    SearchConfig = None
+
 from .background_tasks import BackgroundTaskService, TaskResult
 from .request_analyzer import RequestAnalyzer, RequestAnalysis, TaskComplexity
 from .timeout_processor import TimeoutProcessor, TimeoutConfig
@@ -16,7 +24,7 @@ __all__ = [
     'ChatbotService',
     'ChatResponse',
     'KnowledgeService',
-    'MatchResult',
+    'SearchConfig',
     'BackgroundTaskService',
     'TaskResult',
     'RequestAnalyzer',

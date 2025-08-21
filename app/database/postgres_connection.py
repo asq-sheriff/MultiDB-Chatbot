@@ -16,43 +16,27 @@ from app.config import config
 
 logger = logging.getLogger(__name__)
 
-# Import DatabaseBase from models
 from app.database.postgres_models import DatabaseBase
 
 class PostgreSQLConnectionManager:
-    """
-    PostgreSQL connection manager with async support.
-    Compatible with modern SQLAlchemy and asyncpg versions.
-
-    Used by: services layer for business logic operations
-    Integration: Called from multi_db_service.py and individual services
-    """
-
     def __init__(self):
         self._engine: Optional[AsyncEngine] = None
         self._session_factory: Optional[async_sessionmaker] = None
         self._initialized = False
 
     async def initialize(self) -> None:
-        """
-        Initialize PostgreSQL connection pool.
-        Called by: main.py during application startup
-        """
         if self._initialized:
             logger.info("PostgreSQL already initialized")
             return
 
         try:
-            # Determine if we should use connection pooling
             use_pooling = config.postgresql.host not in ["localhost", "127.0.0.1"]
 
-            # Create engine parameters based on SQLAlchemy 2.0.41 and asyncpg 0.30.0
             engine_kwargs = {
-                "echo": False,  # Set to True for SQL debugging
-                "pool_pre_ping": True,  # Validate connections
+                "echo": False,
+                "pool_pre_ping": True,
             }
 
-            # Add pooling parameters only if using QueuePool
             if use_pooling:
                 engine_kwargs.update({
                     "poolclass": QueuePool,
@@ -62,18 +46,15 @@ class PostgreSQLConnectionManager:
                     "pool_recycle": config.postgresql.pool_recycle,
                 })
             else:
-                # For localhost, use NullPool with simplified parameters
                 engine_kwargs.update({
                     "poolclass": NullPool,
                 })
 
-            # Create async engine
             self._engine = create_async_engine(
                 config.postgresql.url,
                 **engine_kwargs
             )
 
-            # Create session factory (SQLAlchemy 2.0 syntax)
             self._session_factory = async_sessionmaker(
                 self._engine,
                 class_=AsyncSession,
@@ -82,7 +63,6 @@ class PostgreSQLConnectionManager:
                 autocommit=False
             )
 
-            # Test connection
             async with self._engine.begin() as conn:
                 result = await conn.execute(text("SELECT 1 as test"))
                 test_value = result.scalar()
@@ -99,15 +79,6 @@ class PostgreSQLConnectionManager:
 
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
-        """
-        Get PostgreSQL session with automatic transaction management.
-
-        Used by: All services that need PostgreSQL database access
-        Usage pattern:
-            async with postgres_manager.get_session() as session:
-                # Database operations here
-                pass
-        """
         if not self._initialized:
             await self.initialize()
 
@@ -122,23 +93,17 @@ class PostgreSQLConnectionManager:
                 await session.close()
 
     async def get_session_sync(self) -> AsyncSession:
-        """
-        Get PostgreSQL session for dependency injection.
-        Used by: FastAPI dependencies in app/api/dependencies.py
-        """
         if not self._initialized:
             await self.initialize()
         return self._session_factory()
 
     @property
     def engine(self) -> AsyncEngine:
-        """Get the database engine for migrations"""
         if not self._engine:
             raise RuntimeError("PostgreSQL not initialized")
         return self._engine
 
     async def test_connection(self) -> bool:
-        """Test PostgreSQL connection"""
         try:
             async with self._engine.begin() as conn:
                 result = await conn.execute(text("SELECT version()"))
@@ -150,17 +115,24 @@ class PostgreSQLConnectionManager:
             return False
 
     async def close(self) -> None:
-        """Close PostgreSQL connections"""
         if self._engine:
             await self._engine.dispose()
             self._initialized = False
             logger.info("PostgreSQL connections closed")
 
-# Global PostgreSQL manager instance
-postgres_manager = PostgreSQLConnectionManager()
-
-# Helper functions for easy access
 async def get_postgres_session() -> AsyncGenerator[AsyncSession, None]:
-    """Get PostgreSQL session - used in dependency injection"""
     async with postgres_manager.get_session() as session:
         yield session
+
+
+postgres_manager: Optional[PostgreSQLConnectionManager] = None
+
+def get_postgres_manager() -> "PostgreSQLConnectionManager":
+    """Initializes and returns the singleton PostgreSQLConnectionManager."""
+    global postgres_manager
+    if postgres_manager is None:
+        postgres_manager = PostgreSQLConnectionManager()
+    return postgres_manager
+
+
+
