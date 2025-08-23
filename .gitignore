@@ -281,3 +281,8 @@ __pycache__/
 .idea/
 .vscode/
 .env
+
+# Keep AI-assistant config local
+.claude
+.claude_ignore
+.claude_workflows

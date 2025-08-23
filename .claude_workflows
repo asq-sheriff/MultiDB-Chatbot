@@ -1,2 +1,0 @@
-workdir = .
-post_task = ./scripts/codex_publish.sh main
