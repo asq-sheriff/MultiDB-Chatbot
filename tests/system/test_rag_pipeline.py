@@ -1,4 +1,4 @@
-"""Fixed RAG pipeline tests - properly uses getters and handles different search routes"""
+"""RAG pipeline tests"""
 import pytest
 from app.dependencies import (
     get_chatbot_service,
@@ -13,7 +13,6 @@ class TestRAGPipeline:
 
     async def test_embedding_generation(self):
         """Test embedding generation."""
-        # FIXED: Get embedding service using getter
         embedding_service = get_embedding_service()
         assert embedding_service is not None, "Embedding service should be initialized"
 
@@ -38,14 +37,12 @@ class TestRAGPipeline:
 
     async def test_knowledge_retrieval(self):
         """Test knowledge retrieval with different strategies."""
-        # FIXED: Get knowledge service using getter
         knowledge_service = get_knowledge_service()
         assert knowledge_service is not None, "Knowledge service should be initialized"
 
         query = "What is artificial intelligence?"
 
         # Test the search_router method
-        # FIXED: Handle the different possible routes and response structures
         results = await knowledge_service.search_router(
             query=query,
             top_k=3,
@@ -74,7 +71,6 @@ class TestRAGPipeline:
 
     async def test_end_to_end_rag(self):
         """Test complete RAG pipeline from query to response."""
-        # FIXED: Get chatbot service using getter
         chatbot_service = get_chatbot_service()
         assert chatbot_service is not None, "Chatbot service should be initialized"
 
@@ -95,7 +91,6 @@ class TestRAGPipeline:
 
         # Check route information
         if "route" in response:
-            # FIXED: Include all possible routes
             valid_routes = [
                 "exact", "semantic", "hybrid", "auto",
                 "auto->exact", "auto->semantic", "auto->hybrid",

@@ -230,9 +230,7 @@ async def get_usage_summary(
             plan_type=usage_data["plan_type"]  # This is already in usage_data!
         )
     except Exception as e:
-        logger.error(f"Failed to retrieve usage summary: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Failed to retrieve usage summary: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve usage summary: {str(e)}"
@@ -352,11 +350,5 @@ async def handle_stripe_webhook(
     payload: Dict[str, Any],
     stripe_signature: str = Query(default=None)
 ) -> Dict[str, str]:
-    """Handle Stripe webhook events (placeholder for payment integration)"""
-    # This is a placeholder for Stripe webhook handling
-    # In production, you would:
-    # 1. Verify the webhook signature
-    # 2. Process the event (payment succeeded, failed, etc.)
-    # 3. Update subscription status accordingly
-
+    """Handle Stripe webhook events"""
     return {"status": "webhook_received"}

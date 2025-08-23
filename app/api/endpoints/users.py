@@ -3,8 +3,6 @@ Users API Router
 ===============
 
 User management endpoints for profile updates, preferences, and account management.
-
-Location: app/api/endpoints/users.py (Replace empty file)
 """
 
 from typing import Dict, Any, Optional

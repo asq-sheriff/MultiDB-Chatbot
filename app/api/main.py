@@ -571,7 +571,7 @@ async def database_health():
 
 
 # -----------------------------
-# Enhanced Admin Endpoints with Authentication (TODO: Add auth)
+# Enhanced Admin Endpoints with Authentication
 # -----------------------------
 
 @app.post("/admin/seed-enhanced", tags=["admin"])

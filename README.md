@@ -53,7 +53,7 @@ git clone https://github.com/asq-sheriff/MultiDB-Chatbot.git
 cd MultiDB-Chatbot
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python main.py
+python ./app/api/main.py
 ```
 
 **Docker**
@@ -86,8 +86,8 @@ App runs at: [http://localhost:8000/docs](http://localhost:8000/docs) (FastAPI S
 
 ## 📄 Documentation
 
-- [Unified System Design (v3.0)](/docs/multidb_rag_chatbot_v3.0.md)  
-- [Composable AI Stack Whitepaper](/docs/Composable_AI_Stack_Blueprint.pdf)  
+- [📄 Codebase Overview](docs/Codebase_Overview.md)
+- [Unified System Design (v3.0)](/docs/multidb_rag_chatbot_v3.0.md)
 
 ---
 

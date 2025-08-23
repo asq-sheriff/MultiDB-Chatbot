@@ -1,4 +1,4 @@
-"""Shared test fixtures and configuration - FIXED for proper service initialization"""
+"""Shared test fixtures and configuration"""
 
 import pytest
 import asyncio
@@ -49,9 +49,7 @@ def event_loop() -> Generator:
 async def initialize_services(event_loop):
     """
     Initialize all application services once for the test session.
-    FIXED: Properly initialize all services and handle failures gracefully.
     """
-    # FIXED: Reset services first to ensure clean state
     from app.dependencies import reset_services
     reset_services()
 
@@ -78,7 +76,6 @@ async def initialize_services(event_loop):
     except Exception as e:
         logger.warning(f"Redis initialization failed (non-critical): {e}")
 
-    # FIXED: Initialize services using getter functions with proper error handling
     from app import dependencies
 
     services_status = {

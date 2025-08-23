@@ -27,7 +27,7 @@ class TestAIQuality:
 
     @pytest.fixture(autouse=True)
     async def setup(self):
-        """Setup before each test method - FIXED to use async fixture"""
+        """Setup before each test method"""
         # Initialize MongoDB connection for this test
         await init_enhanced_mongo()
 
@@ -339,7 +339,6 @@ class TestAIQuality:
     @pytest.mark.asyncio
     async def test_generation_quality(self):
         """Test that the generated answer contains the unique fact from documents"""
-        # FIXED: Use the correct method name 'answer_user_message' instead of 'process_message'
         response = await self.chatbot_service.answer_user_message(
             user_id="test_user",
             message="What is the secret code for the blue rocket?",
@@ -377,7 +376,6 @@ class TestAIQuality:
         assert len(retrieval_results.get("results", [])) > 0, "Should retrieve relevant documents"
 
         # Then test generation with context
-        # FIXED: Use the correct method name and parameters
         response = await self.chatbot_service.answer_user_message(
             user_id="test_user",
             message=query,

@@ -18,7 +18,6 @@ from app.core.auth_dependencies import (
 )
 from app.database.postgres_models import User
 
-# FIXED: Import service getters from app.dependencies, not auth_dependencies
 from app.dependencies import get_knowledge_service, get_billing_service
 from app.services.knowledge_service import KnowledgeService
 from app.services.billing_service import EnhancedBillingService
@@ -248,7 +247,6 @@ async def get_search_suggestions(
     Protected endpoint for autocomplete functionality.
     """
     try:
-        # Simple implementation - enhance based on your needs
         suggestions = [
             f"{query} in MongoDB",
             f"{query} with Redis",

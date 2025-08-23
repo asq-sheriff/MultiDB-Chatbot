@@ -510,9 +510,7 @@ class EnhancedBillingService:
             return summary
 
         except Exception as e:
-            logger.error(f"Failed to get usage summary: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Failed to get usage summary: {e}", exc_info=True)
 
             # Return safe defaults on error
             return {

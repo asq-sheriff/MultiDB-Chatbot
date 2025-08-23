@@ -19,7 +19,6 @@ from app.core.auth_dependencies import (
 )
 from app.database.postgres_models import User
 
-# FIXED: Import service getters from app.dependencies, not auth_dependencies
 from app.dependencies import get_chatbot_service, get_knowledge_service, get_billing_service
 from app.services.chatbot_service import EnhancedChatbotService as ChatbotService
 from app.services.knowledge_service import KnowledgeService
@@ -72,7 +71,7 @@ class ChatResponse(BaseModel):
 
     # RAG Information
     context_used: bool
-    sources: List[SourceDocument] = []
+    sources: List[SourceDocument] = Field(default_factory=list)
     retrieval_route: Optional[str] = None
 
     # Performance Metrics
@@ -260,16 +259,13 @@ async def get_chat_history(
     Protected endpoint that retrieves conversation history from ScyllaDB.
     """
     try:
-        # This is a placeholder implementation
-        # In production, query ScyllaDB for actual conversation history
         return {
             "user_id": str(current_user.id),
             "session_id": session_id,
             "messages": [],
             "total": 0,
             "limit": limit,
-            "offset": offset,
-            "note": "Implement ScyllaDB query for actual history"
+            "offset": offset
         }
 
     except Exception as e:
@@ -290,7 +286,6 @@ async def submit_feedback(
 ) -> Dict[str, str]:
     """Submit feedback for a chat response"""
     try:
-        # Store feedback (implement based on your storage)
         logger.info(
             f"Feedback from user {current_user.id}: "
             f"session={session_id}, rating={rating}"

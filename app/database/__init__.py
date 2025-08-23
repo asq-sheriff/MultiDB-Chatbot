@@ -1,5 +1,9 @@
 """Database Module Initialization"""
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     from .mongo_connection import (
         enhanced_mongo_manager,
@@ -20,7 +24,7 @@ try:
     MONGO_AVAILABLE = True
 
 except ImportError as e:
-    print(f"MongoDB connection not available: {e}")
+    logger.warning(f"MongoDB connection not available: {e}")
 
     class MockMongoManager:
         def __init__(self):
@@ -59,7 +63,7 @@ try:
     POSTGRES_AVAILABLE = True
 
 except ImportError as e:
-    print(f"PostgreSQL not available: {e}")
+    logger.warning(f"PostgreSQL not available: {e}")
     postgres_manager = None
     get_postgres_session = None
     POSTGRES_AVAILABLE = False
@@ -74,7 +78,7 @@ try:
     SCYLLA_AVAILABLE = True
 
 except ImportError as e:
-    print(f"ScyllaDB not available: {e}")
+    logger.warning(f"ScyllaDB not available: {e}")
 
     class MockScyllaManager:
         def __init__(self):
@@ -100,7 +104,7 @@ try:
     REDIS_AVAILABLE = True
 
 except ImportError as e:
-    print(f"Redis not available: {e}")
+    logger.warning(f"Redis not available: {e}")
     redis_manager = None
     get_redis = None
     REDIS_AVAILABLE = False
@@ -112,7 +116,7 @@ def get_seed_function():
         from app.utils.seed_data import main as seed_main
         return seed_main
     except ImportError as e:
-        print(f"Seed data module not available: {e}")
+        logger.warning(f"Seed data module not available: {e}")
         return None
 
 
@@ -125,10 +129,10 @@ def seed_knowledge_base():
         try:
             return asyncio.run(seed_func())
         except Exception as e:
-            print(f"Seeding failed: {e}")
+            logger.error(f"Seeding failed: {e}")
             return False
     else:
-        print("Seeding not available - seed_data module not found")
+        logger.warning("Seeding not available - seed_data module not found")
         return False
 
 
