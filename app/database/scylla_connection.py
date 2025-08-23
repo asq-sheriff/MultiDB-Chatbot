@@ -77,7 +77,7 @@ class ScyllaDBConnection:
 
             import gc
             for _ in range(3):
-                collected = gc.collect()
+                gc.collect()
                 time.sleep(0.1)
 
             logger.info("ScyllaDB singleton reset complete")

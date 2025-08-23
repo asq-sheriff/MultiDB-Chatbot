@@ -142,7 +142,7 @@ class EnhancedChatbotService:
             GENERATION_SERVICE_AVAILABLE
         )
 
-        logger.info(f"Enhanced ChatbotService initialized")
+        logger.info("Enhanced ChatbotService initialized")
         logger.info(f"  Real generation available: {self.real_generation_available}")
         logger.info(f"  Response strategy: {self.cfg.response_strategy}")
         logger.info(f"  Context optimization: {self.cfg.context_window_optimization}")
@@ -622,16 +622,16 @@ class EnhancedChatbotService:
             context_preview = context[:800] + "..." if len(context) > 800 else context
 
             return (
-                f"Based on the available information:\n\n"
+                "Based on the available information:\n\n"
                 f"{context_preview}\n\n"
                 f"This should help address your question about: \"{message[:100]}...\"\n\n"
-                f"If you need more specific details, please let me know!"
+                "If you need more specific details, please let me know!"
             )
         else:
             return (
                 f"I understand you're asking about: \"{message[:100]}...\"\n\n"
-                f"I don't have specific information available right now, but I'd be happy to help "
-                f"if you could provide more details or rephrase your question."
+                "I don't have specific information available right now, but I'd be happy to help "
+                "if you could provide more details or rephrase your question."
             )
 
     def _enhanced_fallback_answer(self, message: str, context: str = "") -> str:

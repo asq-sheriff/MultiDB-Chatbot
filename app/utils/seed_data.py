@@ -19,8 +19,6 @@ load_dotenv()
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorCollection
-
-# Enhanced imports with better error handling
 from app.database.mongo_connection import enhanced_mongo_manager as mongo_manager
 from app.database.mongo_connection import init_enhanced_mongo, close_enhanced_mongo
 
@@ -741,7 +739,7 @@ class AdvancedSeedingPipeline:
 
             # Retry with smaller batch if enabled
             if len(chunk_data_batch) > 1 and self.config.max_retries > 0:
-                logger.warning(f"🔄 Retrying batch with smaller size...")
+                logger.warning("🔄 Retrying batch with smaller size...")
                 mid = len(chunk_data_batch) // 2
 
                 batch1 = await self._process_chunk_batch(chunk_data_batch[:mid], embedding_texts[:mid], emb_coll)
