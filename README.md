@@ -1,53 +1,95 @@
+# MultiDB Chatbot 🤖 — Production-Grade RAG with a Composable AI Stack
 
-# Enhanced Multi-Database RAG-Based Chatbot Application v3.0
+![CI](https://github.com/asq-sheriff/MultiDB-Chatbot/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.13-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow)
 
-[![Python 3.13.3](https://img.shields.io/badge/python-3.13.3-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A **production-ready Retrieval-Augmented Generation (RAG) system** showcasing a **Composable AI Stack** for modern enterprise-grade conversational AI.  
 
-A production-ready, AI-powered conversational system implementing **state-of-the-art Retrieval-Augmented Generation (RAG)** with a **multi-database architecture**, **real-time vector search**, and **enterprise-grade scalability**.
-
----
-
-## 📌 Executive Summary (For AI Strategy Leaders)
-
-This system is designed to **accelerate AI adoption** in enterprise environments where:
-- **Scalability & resilience** are non-negotiable — supports multi-node distributed databases.
-- **Latency** matters — sub-2s responses with vector search + caching.
-- **Accuracy** is critical — advanced RAG pipeline ensures context-aware answers.
-- **Hybrid AI integration** allows M-series Mac, CUDA GPU, or CPU fallback.
-
-**Strategic Differentiators:**
-- **Multi-DB Architecture**: MongoDB Atlas (vector search), PostgreSQL (business logic), ScyllaDB (high-throughput history), Redis (cache/session).
-- **Enterprise Optimized**: Graceful degradation, health checks, background processing.
-- **Deploy Anywhere**: Local dev, on-prem, or cloud-native.
+Built as part of my **AI/Cloud Engineering portfolio**, this project demonstrates how to design and deliver **scalable, secure, and multi-database conversational systems**.
 
 ---
 
-## 🏗 Architecture Overview
+## ✨ Key Highlights
 
-![System Architecture](docs/images/architecture.png)
+- **Multi-Database Architecture**  
+  - **MongoDB Atlas** for vector search  
+  - **PostgreSQL** for authentication, billing & transactions  
+  - **ScyllaDB** for high-throughput conversation history  
+  - **Redis** for session & caching  
 
-### Component Layers
-1. **Client Layer**: Web, Mobile, API Clients, Admin Dashboard
-2. **FastAPI Application Layer**: Endpoints, Dependency Injection
-3. **Service Layer**: Chatbot, Embedding, Generation, Auth, Multi-DB, Background Tasks
-4. **Database Layer**: MongoDB, PostgreSQL, ScyllaDB, Redis
-5. **AI Models**: sentence-transformers, Qwen3, Mistral fallback
+- **Composable AI Stack** (inspired by [Blueprint doc](/docs/multidb_rag_chatbot_v3.0.md) and [Composable AI Stack Whitepaper](/docs/Composable_AI_Stack_Blueprint.pdf)):  
+  - **Dagster** — Data Plane (document ingestion → chunking → embedding → vector store)  
+  - **Ray Serve** — Serving Plane (low-latency, stateful LangGraph agent)  
+  - **Prefect** — Control Plane (blue/green deployment, validation flows)  
+  - **LangChain / LangGraph** — Agent logic, RAG orchestration  
 
-**See full technical details:** [📄 System Design Document](docs/multidb_rag_chatbot_v1.0.md)
+- **Enterprise Features**  
+  - Authentication (JWT, bcrypt)  
+  - Billing & subscription with quotas  
+  - Role-based access (admin flag `is_superuser`)  
+  - Rate limiting + quota enforcement  
+  - Dockerized for reproducible deployments  
 
 ---
 
-## 🚀 Quick Start
+## 🏗 Architecture
 
-### 1️⃣ Clone & Environment Setup
+![Architecture](docs/images/architecture.png)
+
+**Two-Plane Design** (from [Composable AI Stack Blueprint](/docs/Composable_AI_Stack_Blueprint.pdf)):  
+- **Data Plane (Dagster)** — Reliable ingestion, embeddings, vector index versioning.  
+- **Serving Plane (Ray Serve)** — Low-latency inference, conversational memory.  
+- **Control Plane (Prefect)** — Automated rollout, validation, blue/green deployments.  
+
+---
+
+## 🚀 Quickstart
+
+**Local Dev**
 ```bash
-git clone https://github.com/your-org/multidb-rag-chatbot.git
-cd multidb-rag-chatbot
-
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+git clone https://github.com/asq-sheriff/MultiDB-Chatbot.git
+cd MultiDB-Chatbot
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+python main.py
+```
 
-<!-- codex-publish-smoke-test -->
+**Docker**
+```bash
+docker-compose up --build
+```
+
+App runs at: [http://localhost:8000/docs](http://localhost:8000/docs) (FastAPI Swagger UI).
+
+---
+
+## 🔍 Techstack used
+
+- **Python 3.13+** — async, modern tooling (ruff, pytest, mypy, pre-commit)  
+- **Databases** — MongoDB Atlas Vector Search, PostgreSQL, Redis, ScyllaDB  
+- **AI/ML** — LangChain, LangGraph, SentenceTransformers, Qwen3-1.7B  
+- **Orchestration** — Dagster, Prefect, Ray Serve  
+- **Cloud/DevOps** — Docker, CI/CD with GitHub Actions, branch protection  
+
+---
+
+## 📈 Roadmap
+
+- [ ] AWS Deployment (EC2/VPC, ALB → Ray Serve)  
+- [ ] Prefect-driven blue/green with regression suite  
+- [ ] A/B testing new embedding models in production  
+- [ ] Public demo endpoint  
+
+---
+
+## 📄 Documentation
+
+- [Unified System Design (v3.0)](/docs/multidb_rag_chatbot_v3.0.md)  
+- [Composable AI Stack Whitepaper](/docs/Composable_AI_Stack_Blueprint.pdf)  
+
+---
+
+## 📜 License
+MIT
