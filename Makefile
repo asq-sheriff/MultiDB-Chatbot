@@ -51,3 +51,7 @@ clean:
 	@rm -f .coverage
 	@rm -rf htmlcov
 	@echo "✅ Cleanup complete."
+release:
+	@if [ -z "$$TAG" ]; then echo "Usage: make release TAG=v0.1.0"; exit 1; fi
+	git tag -a $$TAG -m "release $$TAG"
+	git push origin $$TAG
