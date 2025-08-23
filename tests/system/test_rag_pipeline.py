@@ -1,9 +1,10 @@
 """RAG pipeline tests"""
+
 import pytest
 from app.dependencies import (
     get_chatbot_service,
     get_embedding_service,
-    get_knowledge_service
+    get_knowledge_service,
 )
 
 
@@ -19,12 +20,13 @@ class TestRAGPipeline:
         text = "This is a test document about machine learning."
 
         # Check if embed_query method exists (might be using mock embeddings)
-        if hasattr(embedding_service, 'embed_query'):
+        if hasattr(embedding_service, "embed_query"):
             embedding = await embedding_service.embed_query(text)
         else:
             # Fallback for synthetic embeddings in test mode
             import hashlib
             import math
+
             h = hashlib.sha256(text.encode("utf-8")).digest()
             dim = 768  # Or could be 32 for synthetic
             vec = [((h[i % len(h)] / 255.0) - 0.5) for i in range(dim)]
@@ -46,28 +48,32 @@ class TestRAGPipeline:
         results = await knowledge_service.search_router(
             query=query,
             top_k=3,
-            route="semantic"  # Use "semantic" which is supported
+            route="semantic",  # Use "semantic" which is supported
         )
 
         assert results is not None
 
         # The response structure can vary, so check for different possibilities
-        assert any([
-            "results" in results,
-            "documents" in results,
-            "route" in results,
-            "query" in results
-        ])
+        assert any(
+            [
+                "results" in results,
+                "documents" in results,
+                "route" in results,
+                "query" in results,
+            ]
+        )
 
         # If we have results, verify they're structured correctly
         if "results" in results and results["results"]:
             first_result = results["results"][0]
             # Check that results have expected fields
-            assert any([
-                "content" in first_result,
-                "answer" in first_result,
-                "score" in first_result
-            ])
+            assert any(
+                [
+                    "content" in first_result,
+                    "answer" in first_result,
+                    "score" in first_result,
+                ]
+            )
 
     async def test_end_to_end_rag(self):
         """Test complete RAG pipeline from query to response."""
@@ -76,8 +82,7 @@ class TestRAGPipeline:
 
         # Test with a simple query
         response = await chatbot_service.answer_user_message(
-            user_id="test_user",
-            message="What are the main components of a RAG system?"
+            user_id="test_user", message="What are the main components of a RAG system?"
         )
 
         assert response is not None
@@ -92,9 +97,17 @@ class TestRAGPipeline:
         # Check route information
         if "route" in response:
             valid_routes = [
-                "exact", "semantic", "hybrid", "auto",
-                "auto->exact", "auto->semantic", "auto->hybrid",
-                "vector", "keyword", "mock", "error_fallback"
+                "exact",
+                "semantic",
+                "hybrid",
+                "auto",
+                "auto->exact",
+                "auto->semantic",
+                "auto->hybrid",
+                "vector",
+                "keyword",
+                "mock",
+                "error_fallback",
             ]
             # The route might be a composite like "auto->semantic"
             assert any(route in response["route"] for route in valid_routes)

@@ -106,8 +106,6 @@ docker-compose up --build
 3. Open a PR (template provided); CI must pass  
 4. For data/model changes, include eval results or golden‑set diffs
 
-**Automation helper**: AI‑assisted edits can be auto‑published via `./scripts/codex_publish.sh main` (used by Codex post‑task hooks).
-
 ---
 
 ## 📜 License
