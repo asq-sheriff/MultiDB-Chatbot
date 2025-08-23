@@ -243,7 +243,7 @@ class KnowledgeService:
 
         # FIXED: Check vector search availability at runtime, not init time
         # We'll check this when we actually need it
-        logger.info(f"  Atlas Vector Search available: Will check at runtime")
+        logger.info("  Atlas Vector Search available: Will check at runtime")
 
     def _get_mongo_manager(self):
         """Get the MongoDB manager instance - FIXED to use the getter function"""
@@ -845,7 +845,7 @@ class KnowledgeService:
                     })
 
             if not candidates:
-                logger.warning(f"No documents found even with broader retrieval")
+                logger.warning("No documents found even with broader retrieval")
                 return []
 
             logger.info(f"Using {len(candidates)} candidates for re-ranking")

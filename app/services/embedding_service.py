@@ -84,7 +84,7 @@ class EmbeddingService:
         # Memory monitoring
         self._process = psutil.Process()
 
-        logger.info(f"sentence-transformers/all-mpnet-base-v2 EmbeddingService initialized")
+        logger.info("sentence-transformers/all-mpnet-base-v2 EmbeddingService initialized")
 
     async def embed_query(self, text: str) -> List[float]:
         """
