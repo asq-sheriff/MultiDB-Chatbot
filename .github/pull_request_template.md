@@ -1,15 +1,18 @@
 ## Summary
-- What does this PR change?
+Describe the change and why it’s needed.
 
-## Changes
+## Type of change
 - [ ] Feature
 - [ ] Bugfix
-- [ ] Docs update
+- [ ] Docs
+- [ ] Refactor
+- [ ] CI/CD
 
-## Testing
-- Steps or commands to test locally
+## How to test
+Steps / commands to verify locally.
 
 ## Checklist
-- [ ] Linted with ruff
+- [ ] Code linted (ruff)
 - [ ] Tests run (pytest)
-- [ ] README updated if needed
+- [ ] Updated README/docs if needed
+- [ ] No direct pushes to main (PR only)
