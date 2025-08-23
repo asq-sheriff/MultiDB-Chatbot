@@ -1,14 +1,2 @@
-workflows:
-  test_and_commit:
-    description: "Run tests and commit if passing"
-    steps:
-      - command: "/test"
-      - command: "/git add ."
-      - command: "/git commit -m 'Tests passing'"
-
-  full_review:
-    description: "Complete code review"
-    steps:
-      - command: "/analyze @**/*.py"
-      - command: "/security @**/*.py"
-      - command: "/performance"
+workdir = .
+post_task = ./scripts/codex_publish.sh main
