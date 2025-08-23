@@ -1,13 +1,12 @@
 """MongoDB Connection Manager with Atlas Vector Search Support"""
 
-import asyncio
 import logging
 from typing import Optional, List, Dict, Any
 import os
 
 try:
     from motor.motor_asyncio import AsyncIOMotorClient
-    from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+
     MOTOR_AVAILABLE = True
 except ImportError:
     MOTOR_AVAILABLE = False
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class MongoConfig:
     """MongoDB configuration"""
-    
+
     def __init__(self):
         self.host = os.getenv("MONGO_HOST", "localhost")
         self.port = int(os.getenv("MONGO_PORT", "27017"))
@@ -43,7 +42,7 @@ class MongoConfig:
 
 class AtlasVectorSearchConfig:
     """Atlas Vector Search configuration"""
-    
+
     def __init__(self):
         self.index_name = os.getenv("ATLAS_VECTOR_INDEX_NAME", "vector_index")
         self.collection_name = os.getenv("ATLAS_COLLECTION_NAME", "documents")
@@ -54,7 +53,7 @@ class AtlasVectorSearchConfig:
 
 class EnhancedMongoManager:
     """Enhanced MongoDB Manager with Atlas Vector Search support"""
-    
+
     def __init__(self):
         self.client: Optional[AsyncIOMotorClient] = None
         self.database = None
@@ -73,23 +72,24 @@ class EnhancedMongoManager:
         try:
             connection_string = self.config.get_connection_string()
             self.client = AsyncIOMotorClient(
-                connection_string,
-                serverSelectionTimeoutMS=5000
+                connection_string, serverSelectionTimeoutMS=5000
             )
-            
+
             # Test connection
-            await self.client.admin.command('ping')
-            
+            await self.client.admin.command("ping")
+
             self.database = self.client[self.config.database]
             self.is_connected = True
-            
+
             # Check if Atlas Vector Search is available
             if self.is_atlas:
                 self.vector_search_available = await self._check_vector_search()
-            
-            logger.info(f"MongoDB connected successfully (Atlas: {self.is_atlas}, Vector Search: {self.vector_search_available})")
+
+            logger.info(
+                f"MongoDB connected successfully (Atlas: {self.is_atlas}, Vector Search: {self.vector_search_available})"
+            )
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
             self.is_connected = False
@@ -119,32 +119,26 @@ class EnhancedMongoManager:
     async def health_check(self) -> Dict[str, Any]:
         """MongoDB health check"""
         if not self.is_connected:
-            return {
-                "status": "disconnected",
-                "error": "Not connected to MongoDB"
-            }
+            return {"status": "disconnected", "error": "Not connected to MongoDB"}
 
         try:
             # Ping the database
-            await self.client.admin.command('ping')
-            
+            await self.client.admin.command("ping")
+
             # Get server info
-            server_info = await self.client.admin.command('buildinfo')
-            
+            server_info = await self.client.admin.command("buildinfo")
+
             return {
                 "status": "healthy",
                 "is_atlas": self.is_atlas,
                 "vector_search_available": self.vector_search_available,
                 "server_version": server_info.get("version", "unknown"),
-                "database": self.config.database
+                "database": self.config.database,
             }
-            
+
         except Exception as e:
             logger.error(f"MongoDB health check failed: {e}")
-            return {
-                "status": "unhealthy",
-                "error": str(e)
-            }
+            return {"status": "unhealthy", "error": str(e)}
 
     async def create_collection(self, collection_name: str) -> bool:
         """Create a collection"""
@@ -159,7 +153,9 @@ class EnhancedMongoManager:
             logger.error(f"Failed to create collection '{collection_name}': {e}")
             return False
 
-    async def insert_document(self, collection_name: str, document: Dict[str, Any]) -> Optional[str]:
+    async def insert_document(
+        self, collection_name: str, document: Dict[str, Any]
+    ) -> Optional[str]:
         """Insert a document"""
         if not self.is_connected:
             return None
@@ -172,21 +168,23 @@ class EnhancedMongoManager:
             logger.error(f"Failed to insert document: {e}")
             return None
 
-    async def vector_search(self, 
-                          query_vector: List[float], 
-                          collection_name: str = None,
-                          limit: int = 5,
-                          filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    async def vector_search(
+        self,
+        query_vector: List[float],
+        collection_name: str = None,
+        limit: int = 5,
+        filters: Dict[str, Any] = None,
+    ) -> List[Dict[str, Any]]:
         """Perform Atlas Vector Search"""
         if not self.vector_search_available:
             logger.warning("Vector search not available")
             return []
 
         collection_name = collection_name or self.vector_config.collection_name
-        
+
         try:
             collection = self.database[collection_name]
-            
+
             # Build vector search pipeline
             pipeline = [
                 {
@@ -195,27 +193,23 @@ class EnhancedMongoManager:
                         "path": self.vector_config.embedding_field,
                         "queryVector": query_vector,
                         "numCandidates": limit * 2,
-                        "limit": limit
+                        "limit": limit,
                     }
                 }
             ]
-            
+
             # Add filters if provided
             if filters:
                 pipeline.append({"$match": filters})
-            
+
             # Add score calculation
-            pipeline.append({
-                "$addFields": {
-                    "score": {"$meta": "vectorSearchScore"}
-                }
-            })
-            
+            pipeline.append({"$addFields": {"score": {"$meta": "vectorSearchScore"}}})
+
             # Execute search
             results = await collection.aggregate(pipeline).to_list(length=limit)
-            
+
             return results
-            
+
         except Exception as e:
             logger.error(f"Vector search failed: {e}")
             return []
@@ -259,15 +253,15 @@ def get_mongo_database():
 
 # Export all classes and functions
 __all__ = [
-    'EnhancedMongoManager',
-    'MongoConfig', 
-    'AtlasVectorSearchConfig',
-    'enhanced_mongo_manager',
-    'mongo_manager',
-    'init_enhanced_mongo',
-    'close_enhanced_mongo', 
-    'init_mongo',
-    'close_mongo',
-    'get_mongo_client',
-    'get_mongo_database'
+    "EnhancedMongoManager",
+    "MongoConfig",
+    "AtlasVectorSearchConfig",
+    "enhanced_mongo_manager",
+    "mongo_manager",
+    "init_enhanced_mongo",
+    "close_enhanced_mongo",
+    "init_mongo",
+    "close_mongo",
+    "get_mongo_client",
+    "get_mongo_database",
 ]
