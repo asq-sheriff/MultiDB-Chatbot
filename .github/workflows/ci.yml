@@ -17,6 +17,45 @@ jobs:
       matrix:
         python-version: [ "3.11", "3.12" ]
 
+    # Add all required database services
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: chatbot_app
+          POSTGRES_USER: chatbot_user
+          POSTGRES_PASSWORD: secure_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:6-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mongodb:
+        image: mongo:6
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: example
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "echo 'db.runCommand(\"ping\").ok' | mongosh --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -25,6 +64,48 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: requirements.txt
+
+      # Start ScyllaDB manually since it's not available as a service
+      - name: Start ScyllaDB
+        run: |
+          docker run -d \
+            --name scylla-node1 \
+            -p 9042:9042 \
+            -p 10000:10000 \
+            scylladb/scylla \
+            --smp 1 --memory 750M --overprovisioned 1 --api-address 0.0.0.0
+
+      # Wait for ScyllaDB to be ready
+      - name: Wait for ScyllaDB
+        run: |
+          echo "Waiting for ScyllaDB to be ready..."
+          for i in {1..30}; do
+            if docker exec scylla-node1 nodetool status 2>/dev/null | grep -q "UN"; then
+              echo "ScyllaDB is ready!"
+              break
+            fi
+            echo "Attempt $i/30: ScyllaDB not ready yet..."
+            sleep 5
+          done
+          # Final check
+          docker exec scylla-node1 nodetool status
+
+      # Verify all services are accessible
+      - name: Verify services connectivity
+        run: |
+          echo "Checking Redis..."
+          nc -zv localhost 6379
+          
+          echo "Checking MongoDB..."
+          nc -zv localhost 27017
+          
+          echo "Checking PostgreSQL..."
+          nc -zv localhost 5432
+          
+          echo "Checking ScyllaDB..."
+          nc -zv localhost 9042
+          
+          echo "All services are accessible!"
 
       - name: Install deps
         run: |
@@ -35,9 +116,14 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
-      # QUICK tests; skip slow/integration if you have markers
+      # Set environment variables for database connections
       - name: Test (pytest)
         env:
-          SKIP_INTEGRATION: "1"
+          SKIP_INTEGRATION: "0"  # Enable integration tests since we have databases
+          MONGODB_URI: "mongodb://root:example@localhost:27017/?directConnection=true"
+          REDIS_URL: "redis://localhost:6379/0"
+          POSTGRES_DSN: "postgresql+asyncpg://chatbot_user:secure_password@localhost:5432/chatbot_app"
+          SCYLLA_HOSTS: "localhost"
+          SCYLLA_PORT: "9042"
         run: |
-          pytest -q || pytest -q -k "not integration and not slow"
+          pytest -q || pytest -q -k "not slow"
