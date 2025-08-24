@@ -251,6 +251,11 @@ def get_mongo_database():
     return enhanced_mongo_manager.database
 
 
+def get_mongo_manager():
+    """Get MongoDB manager"""
+    return enhanced_mongo_manager
+
+
 # Export all classes and functions
 __all__ = [
     "EnhancedMongoManager",
@@ -264,4 +269,5 @@ __all__ = [
     "close_mongo",
     "get_mongo_client",
     "get_mongo_database",
+    "get_mongo_manager",
 ]
