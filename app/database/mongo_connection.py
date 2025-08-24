@@ -8,7 +8,7 @@ import math
 import os
 import logging
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 import asyncio
 
@@ -19,12 +19,9 @@ from motor.motor_asyncio import (
 )
 from pymongo.errors import (
     ConnectionFailure,
-    ServerSelectionTimeoutError,
-    OperationFailure,
-    ConfigurationError
+    OperationFailure
 )
 from pymongo import ASCENDING, TEXT
-from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +186,7 @@ class EnhancedMongoConnectionManager:
             self._connected = True
             self._is_atlas = True
 
-            logger.info(f"âœ… MongoDB Atlas connected successfully")
+            logger.info("âœ… MongoDB Atlas connected successfully")
             logger.info(f"   Database: {self._config.db_name}")
             logger.info(f"   Vector Search: {'Available' if self._vector_search_available else 'Not Available'}")
             return True
@@ -273,7 +270,7 @@ class EnhancedMongoConnectionManager:
                 self._is_atlas = False
                 logger.info("ðŸ“¦ Standard MongoDB detected (no vector search)")
 
-            logger.info(f"âœ… Local MongoDB connected successfully")
+            logger.info("âœ… Local MongoDB connected successfully")
             logger.info(f"   Database: {self._config.db_name}")
             logger.info(f"   Host: {self._config.host}:{self._config.port}")
             logger.info(f"   Direct connection: {'directConnection=true' in uri}")
@@ -328,7 +325,7 @@ class EnhancedMongoConnectionManager:
 
                 # Execute the pipeline
                 cursor = collection.aggregate(test_pipeline, maxTimeMS=5000)
-                results = await cursor.to_list(1)
+                await cursor.to_list(1)
 
                 # If we get here without error, vector search is working!
                 logger.info(f"âœ… Vector search is WORKING with index '{index_name}'!")
@@ -410,7 +407,7 @@ class EnhancedMongoConnectionManager:
                     self._is_atlas = True
                     return True
 
-            except:
+            except Exception:
                 pass
 
             return False
