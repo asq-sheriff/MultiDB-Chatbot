@@ -23,16 +23,16 @@ test:
 	@scripts/run_tests.sh
 
 test-unit:
-	@scripts/run_comprehensive_tests.sh unit false
+	@scripts/run_tests.sh unit
 
 test-integration:
-	@scripts/run_comprehensive_tests.sh integration false
+	@scripts/run_tests.sh integration
 
 test-system:
-	@scripts/run_comprehensive_tests.sh system false
+	@scripts/run_tests.sh system
 
 test-all:
-	@scripts/run_comprehensive_tests.sh all true
+	@scripts/run_tests.sh all true
 
 coverage:
 	@echo "📊 Generating coverage report..."
